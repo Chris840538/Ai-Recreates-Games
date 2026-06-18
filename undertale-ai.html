@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Heartbound Echoes – Mini Undertale-like</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    #gameWrapper {
+      margin-top: 10px;
+      border: 2px solid #fff;
+    }
+    canvas {
+      background: #111;
+      image-rendering: pixelated;
+    }
+    #ui {
+      margin-top: 8px;
+      width: 640px;
+      min-height: 80px;
+      border: 2px solid #fff;
+      padding: 6px;
+      box-sizing: border-box;
+      background: #000;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h2>Heartbound Echoes (Mini Undertale‑like)</h2>
+  <div id="gameWrapper">
+    <canvas id="game" width="320" height="180"></canvas>
+  </div>
+  <div id="ui"></div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const ui = document.getElementById("ui");
+
+    const SCALE = 2; // visual scale
+    canvas.style.width = canvas.width * SCALE + "px";
+    canvas.style.height = canvas.height * SCALE + "px";
+
+    const TILE = 16;
+
+    // Simple rooms (0 = floor, 1 = wall, 2 = door to next room)
+    const rooms = [
+      {
+        name: "Fallen Clearing",
+        map: [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        ],
+        introText: "You wake up in a glowing clearing.\nA soft voice: \"Hey... I'm Luma. I’ll guide you.\"",
+      },
+      {
+        name: "Whispering Caverns",
+        map: [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        ],
+        introText: "Echoes repeat your footsteps.\nA monster appears: Grindle.\nHe looks scary, but his eyes are gentle.",
+      },
+      {
+        name: "Throne of Echoes",
+        map: [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        ],
+        introText: "You reach the Throne of Echoes.\nThe Echo King appears, shaped by your choices.",
+      }
+    ];
+
+    let currentRoomIndex = 0;
+
+    const player = {
+      x: TILE * 2,
+      y: TILE * 5,
+      w: TILE,
+      h: TILE,
+      color: "#4af",
+      mercyCount: 0,
+      killCount: 0,
+    };
+
+    let keys = {};
+    let inDialogue = true;
+    let inBattle = false;
+    let battleState = null;
+
+    function setText(text) {
+      ui.textContent = text;
+    }
+
+    function startRoom(index) {
+      currentRoomIndex = index;
+      const room = rooms[currentRoomIndex];
+      player.x = TILE * 2;
+      player.y = TILE * 5;
+      inDialogue = true;
+      inBattle = false;
+      battleState = null;
+      setText(
+        room.name +
+        "\n\n" +
+        room.introText +
+        "\n\nUse arrow keys to move. Walk into the glowing door to continue."
+      );
+    }
+
+    function startBattle(enemyName) {
+      inBattle = true;
+      inDialogue = false;
+      battleState = {
+        enemyName,
+        enemyHp: 20,
+        playerHp: 20,
+        phase: "menu", // menu or dodge
+        dodgeTimer: 0,
+        bullets: [],
+      };
+      setText(
+        enemyName +
+        " blocks your path.\n\n" +
+        "[Z] Fight   [X] Talk   [C] Spare"
+      );
+    }
+
+    function endBattle(result) {
+      inBattle = false;
+      battleState = null;
+      if (result === "kill") {
+        player.killCount++;
+        setText("You defeated the monster.\nIt falls silent.\n\nMove on...");
+      } else if (result === "spare") {
+        player.mercyCount++;
+        setText("You spared the monster.\nIt smiles faintly.\n\nMove on...");
+      } else {
+        setText("The battle ends.\n\nMove on...");
+      }
+    }
+
+    function handleBattleKey(e) {
+      if (!battleState || battleState.phase !== "menu") return;
+      if (e.key === "z") {
+        battleState.enemyHp -= 10;
+        if (battleState.enemyHp <= 0) {
+          endBattle("kill");
+          return;
+        }
+        battleState.phase = "dodge";
+        battleState.dodgeTimer = 120;
+        battleState.bullets = [];
+        setText("You attack!\n\nNow dodge the echoes (use arrow keys).");
+      } else if (e.key === "x") {
+        setText("You talk.\nGrindle seems calmer.\n\n[C] Spare?");
+      } else if (e.key === "c") {
+        endBattle("spare");
+      }
+    }
+
+    function updateBattle() {
+      if (!battleState || battleState.phase !== "dodge") return;
+      battleState.dodgeTimer--;
+      if (Math.random() < 0.1) {
+        battleState.bullets.push({
+          x: Math.random() * (canvas.width - 40) + 20,
+          y: 0,
+          vy: 2 + Math.random() * 2,
+          r: 3,
+        });
+      }
+      battleState.bullets.forEach(b => {
+        b.y += b.vy;
+      });
+      battleState.bullets = battleState.bullets.filter(b => b.y < canvas.height);
+
+      const soul = {
+        x: player.x + player.w / 2,
+        y: player.y + player.h / 2,
+        r: 4,
+      };
+      for (const b of battleState.bullets) {
+        const dx = b.x - soul.x;
+        const dy = b.y - soul.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < b.r + soul.r) {
+          battleState.playerHp -= 1;
+        }
+      }
+
+      if (battleState.playerHp <= 0) {
+        setText("You fall.\nThe echoes consume you.\n\nRefresh to retry.");
+        inBattle = false;
+        battleState = null;
+        return;
+      }
+
+      if (battleState.dodgeTimer <= 0) {
+        battleState.phase = "menu";
+        setText(
+          battleState.enemyName +
+          " watches you.\nHP: " +
+          battleState.playerHp +
+          "\n\n[Z] Fight   [X] Talk   [C] Spare"
+        );
+      }
+    }
+
+    function isWallAt(px, py) {
+      const room = rooms[currentRoomIndex];
+      const tx = Math.floor(px / TILE);
+      const ty = Math.floor(py / TILE);
+      if (ty < 0 || ty >= room.map.length || tx < 0 || tx >= room.map[0].length) return true;
+      return room.map[ty][tx] === 1;
+    }
+
+    function isDoorAt(px, py) {
+      const room = rooms[currentRoomIndex];
+      const tx = Math.floor(px / TILE);
+      const ty = Math.floor(py / TILE);
+      if (ty < 0 || ty >= room.map.length || tx < 0 || tx >= room.map[0].length) return false;
+      return room.map[ty][tx] === 2;
+    }
+
+    window.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+      if (inBattle) {
+        handleBattleKey(e);
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    function update() {
+      if (!inBattle) {
+        let nx = player.x;
+        let ny = player.y;
+        const speed = 1.5;
+        if (keys["ArrowUp"]) ny -= speed;
+        if (keys["ArrowDown"]) ny += speed;
+        if (keys["ArrowLeft"]) nx -= speed;
+        if (keys["ArrowRight"]) nx += speed;
+
+        if (!isWallAt(nx, player.y) && !isWallAt(nx + player.w - 1, player.y) &&
+            !isWallAt(nx, player.y + player.h - 1) && !isWallAt(nx + player.w - 1, player.y + player.h - 1)) {
+          player.x = nx;
+        }
+        if (!isWallAt(player.x, ny) && !isWallAt(player.x + player.w - 1, ny) &&
+            !isWallAt(player.x, ny + player.h - 1) && !isWallAt(player.x + player.w - 1, ny + player.h - 1)) {
+          player.y = ny;
+        }
+
+        if (isDoorAt(player.x + player.w / 2, player.y + player.h / 2)) {
+          if (currentRoomIndex === 0) {
+            startRoom(1);
+            startBattle("Grindle");
+          } else if (currentRoomIndex === 1 && !inBattle) {
+            startRoom(2);
+            const mercy = player.mercyCount;
+            const kills = player.killCount;
+            let ending;
+            if (kills > mercy) {
+              ending = "RUIN ENDING:\nYou become the new Echo King.\nThe realm trembles under your will.";
+            } else if (mercy > 0 && kills === 0) {
+              ending = "TRUE PEACE ENDING:\nYou free the Echo King from fear.\nThe realm sings with quiet joy.";
+            } else {
+              ending = "BITTERSWEET ENDING:\nYou saved some, hurt others.\nThe Echo King fades, leaving a fractured calm.";
+            }
+            setText(rooms[2].introText + "\n\n" + ending + "\n\nThanks for playing.");
+          }
+        }
+      } else {
+        updateBattle();
+        let nx = player.x;
+        let ny = player.y;
+        const speed = 2;
+        if (keys["ArrowUp"]) ny -= speed;
+        if (keys["ArrowDown"]) ny += speed;
+        if (keys["ArrowLeft"]) nx -= speed;
+        if (keys["ArrowRight"]) nx += speed;
+        player.x = Math.max(20, Math.min(canvas.width - 20 - player.w, nx));
+        player.y = Math.max(100, Math.min(canvas.height - 20 - player.h, ny));
+      }
+    }
+
+    function drawRoom() {
+      const room = rooms[currentRoomIndex];
+      for (let y = 0; y < room.map.length; y++) {
+        for (let x = 0; x < room.map[0].length; x++) {
+          const tile = room.map[y][x];
+          let color = "#222";
+          if (tile === 1) color = "#333";
+          if (tile === 0) color = "#111";
+          if (tile === 2) color = "#6cf";
+          ctx.fillStyle = color;
+          ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+        }
+      }
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(player.x + 4, player.y + 4, 2, 2);
+    }
+
+    function drawBattleOverlay() {
+      if (!battleState) return;
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(20, 100, canvas.width - 40, canvas.height - 120);
+
+      ctx.fillStyle = "#f44";
+      battleState.bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = "#f00";
+      ctx.beginPath();
+      ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#fff";
+      ctx.fillText("HP: " + battleState.playerHp, 24, 112);
+      ctx.fillText(battleState.enemyName, canvas.width - 120, 112);
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawRoom();
+      drawPlayer();
+      if (inBattle) drawBattleOverlay();
+    }
+
+    function loop() {
+      update();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    startRoom(0);
+    loop();
+  </script>
+</body>
+</html>
